@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GTD · David Pueyo</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0d1b2a;
+    --teal: #1a8c8c;
+    --teal-light: #22b5b5;
+    --gold: #c9a84c;
+    --gold-light: #e8c96a;
+    --cream: #f5f0e8;
+    --cream-dark: #ede6d6;
+    --text: #1a1a2e;
+    --muted: #7a7a8a;
+    --white: #ffffff;
+    --done-bg: #e8f5e9;
+    --done-text: #388e3c;
+    --recur-tag: #fff3e0;
+    --recur-text: #e65100;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Figtree', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--navy);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 2px solid var(--teal);
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .header-brand h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 1.6rem;
+    color: var(--white);
+    letter-spacing: -0.02em;
+  }
+
+  .header-brand span {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--teal-light);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .week-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--cream);
+  }
+
+  .week-nav button {
+    background: none;
+    border: 1px solid var(--teal);
+    color: var(--teal-light);
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+
+  .week-nav button:hover { background: var(--teal); color: white; }
+
+  .week-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--gold);
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    background: var(--navy);
+    display: flex;
+    gap: 4px;
+    padding: 0 32px 12px;
+  }
+
+  .tab {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: rgba(255,255,255,0.07);
+    color: var(--muted);
+  }
+
+  .tab.active {
+    background: var(--teal);
+    color: white;
+  }
+
+  /* ── MAIN ── */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px;
+  }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── WEEK GRID ── */
+  .week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+  }
+
+  @media (max-width: 900px) {
+    .week-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .week-grid { grid-template-columns: repeat(2, 1fr); }
+    header { padding: 14px 16px; }
+    .tabs { padding: 0 16px 10px; }
+    main { padding: 16px 12px; }
+  }
+
+  .day-col {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    display: flex;
+    flex-direction: column;
+    min-height: 280px;
+  }
+
+  .day-header {
+    padding: 10px 12px 8px;
+    background: var(--navy);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .day-header .day-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--teal-light);
+  }
+
+  .day-header .day-date {
+    font-family: 'Instrument Serif', serif;
+    font-size: 1.4rem;
+    color: white;
+    line-height: 1;
+  }
+
+  .day-header.today { background: var(--teal); }
+  .day-header.today .day-name { color: rgba(255,255,255,0.7); }
+
+  .task-list {
+    flex: 1;
+    padding: 8px 8px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 5px 7px;
+    border-radius: 7px;
+    background: var(--cream);
+    font-size: 0.8rem;
+    line-height: 1.3;
+    transition: background 0.1s;
+    cursor: default;
+  }
+
+  .task-item:hover { background: var(--cream-dark); }
+
+  .task-item.done {
+    background: var(--done-bg);
+    opacity: 0.7;
+  }
+
+  .task-item.done .task-text {
+    text-decoration: line-through;
+    color: var(--done-text);
+  }
+
+  .task-item input[type="checkbox"] {
+    margin-top: 2px;
+    accent-color: var(--teal);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .task-text { flex: 1; word-break: break-word; }
+
+  .tag-recur {
+    font-size: 0.55rem;
+    font-family: 'DM Mono', monospace;
+    background: var(--recur-tag);
+    color: var(--recur-text);
+    padding: 1px 5px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    letter-spacing: 0.04em;
+  }
+
+  .task-delete {
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 0 2px;
+    flex-shrink: 0;
+    line-height: 1;
+    transition: color 0.1s;
+  }
+
+  .task-delete:hover { color: #e53935; }
+
+  .add-task-form {
+    padding: 6px 8px 8px;
+    display: flex;
+    gap: 4px;
+  }
+
+  .add-task-form input {
+    flex: 1;
+    border: 1px solid var(--cream-dark);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 0.78rem;
+    font-family: 'Figtree', sans-serif;
+    background: var(--cream);
+    outline: none;
+    transition: border 0.15s;
+  }
+
+  .add-task-form input:focus { border-color: var(--teal); }
+
+  .add-task-form button {
+    background: var(--teal);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0 10px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.15s;
+  }
+
+  .add-task-form button:hover { background: var(--teal-light); }
+
+  /* recurrente toggle */
+  .recur-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 8px 6px;
+    font-size: 0.7rem;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .recur-toggle input { accent-color: var(--recur-text); cursor: pointer; }
+
+  /* ── IDEAS / INSTA ── */
+  .section-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .section-card {
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+
+  .section-card-header {
+    padding: 14px 18px 12px;
+    background: var(--navy);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .section-card-header h2 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 1.2rem;
+    color: white;
+  }
+
+  .section-card-header .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    background: var(--gold);
+    color: var(--navy);
+    padding: 2px 8px;
+    border-radius: 12px;
+    letter-spacing: 0.08em;
+  }
+
+  .section-card-header .badge.teal {
+    background: var(--teal);
+    color: white;
+  }
+
+  .notes-area {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .note-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--cream);
+    font-size: 0.83rem;
+    line-height: 1.4;
+    transition: background 0.1s;
+  }
+
+  .note-item:hover { background: var(--cream-dark); }
+
+  .note-bullet {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--gold);
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+
+  .note-bullet.teal { background: var(--teal); }
+
+  .note-text { flex: 1; word-break: break-word; }
+
+  .note-delete {
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0;
+    transition: color 0.1s;
+  }
+
+  .note-delete:hover { color: #e53935; }
+
+  .note-add-form {
+    padding: 0 16px 14px;
+    display: flex;
+    gap: 6px;
+  }
+
+  .note-add-form input {
+    flex: 1;
+    border: 1px solid var(--cream-dark);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 0.82rem;
+    font-family: 'Figtree', sans-serif;
+    background: var(--cream);
+    outline: none;
+    transition: border 0.15s;
+  }
+
+  .note-add-form input:focus { border-color: var(--teal); }
+
+  .note-add-form button {
+    background: var(--navy);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0 14px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-family: 'Figtree', sans-serif;
+    font-weight: 600;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+
+  .note-add-form button:hover { background: var(--teal); }
+
+  /* insta extras */
+  .insta-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+    padding: 0 16px 0;
+  }
+
+  .insta-tag {
+    font-size: 0.68rem;
+    font-family: 'DM Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 12px;
+    cursor: pointer;
+    border: 1px solid currentColor;
+    transition: all 0.1s;
+    user-select: none;
+  }
+
+  .insta-tag.idea { color: var(--teal); background: rgba(26,140,140,0.08); }
+  .insta-tag.idea.active { background: var(--teal); color: white; }
+  .insta-tag.reel { color: var(--gold); background: rgba(201,168,76,0.1); }
+  .insta-tag.reel.active { background: var(--gold); color: var(--navy); }
+  .insta-tag.stories { color: #9c27b0; background: rgba(156,39,176,0.08); }
+  .insta-tag.stories.active { background: #9c27b0; color: white; }
+  .insta-tag.pendiente { color: #e65100; background: rgba(230,81,0,0.08); }
+  .insta-tag.pendiente.active { background: #e65100; color: white; }
+
+  .content-type-badge {
+    font-size: 0.6rem;
+    font-family: 'DM Mono', monospace;
+    padding: 1px 6px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 20px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-style: italic;
+  }
+
+  /* ── RESET BTN ── */
+  .week-reset {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    background: none;
+    border: 1px solid rgba(201,168,76,0.4);
+    color: var(--gold);
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .week-reset:hover { background: var(--gold); color: var(--navy); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--cream-dark); border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <h1>GTD</h1>
+    <span>@fisiodavidpueyo</span>
+  </div>
+  <div class="week-nav">
+    <button onclick="changeWeek(-1)" title="Semana anterior">‹</button>
+    <span class="week-label" id="weekLabel"></span>
+    <button onclick="changeWeek(1)" title="Semana siguiente">›</button>
+    <button class="week-reset" onclick="resetWeekTasks()" style="margin-left:8px">Nueva semana</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('semana', this)">📅 Semana</button>
+  <button class="tab" onclick="switchTab('ideas', this)">💡 Ideas</button>
+  <button class="tab" onclick="switchTab('insta', this)">📱 Instagram</button>
+</div>
+
+<main>
+
+  <!-- SEMANA -->
+  <div id="view-semana" class="view active">
+    <div class="week-grid" id="weekGrid"></div>
+  </div>
+
+  <!-- IDEAS -->
+  <div id="view-ideas" class="view">
+    <div class="section-grid">
+      <div class="section-card">
+        <div class="section-card-header">
+          <h2>💡 Ideas sueltas</h2>
+          <span class="badge" id="ideasCount">0</span>
+        </div>
+        <div class="notes-area" id="ideasList"></div>
+        <div class="note-add-form">
+          <input type="text" id="ideaInput" placeholder="Nueva idea..." onkeydown="if(event.key==='Enter') addIdea()">
+          <button onclick="addIdea()">+ Añadir</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSTAGRAM -->
+  <div id="view-insta" class="view">
+    <div class="section-grid">
+      <div class="section-card">
+        <div class="section-card-header">
+          <h2>📱 Contenido Instagram</h2>
+          <span class="badge teal" id="instaCount">0</span>
+        </div>
+        <div class="insta-meta" id="instaTags">
+          <span class="insta-tag idea active" data-filter="all" onclick="filterInsta('all', this)">Todos</span>
+          <span class="insta-tag idea" data-filter="Reel" onclick="filterInsta('Reel', this)">Reel</span>
+          <span class="insta-tag reel" data-filter="Stories" onclick="filterInsta('Stories', this)">Stories</span>
+          <span class="insta-tag stories" data-filter="Carrusel" onclick="filterInsta('Carrusel', this)">Carrusel</span>
+          <span class="insta-tag pendiente" data-filter="Pendiente" onclick="filterInsta('Pendiente', this)">Pendiente</span>
+        </div>
+        <div class="notes-area" id="instaList"></div>
+        <div class="note-add-form" style="flex-direction:column;gap:6px;">
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="instaInput" placeholder="Idea de contenido..." onkeydown="if(event.key==='Enter') addInsta()" style="flex:1">
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;padding:0;">
+            <select id="instaType" style="font-family:'Figtree',sans-serif;font-size:0.78rem;border:1px solid var(--cream-dark);border-radius:8px;padding:5px 8px;background:var(--cream);outline:none;cursor:pointer;">
+              <option value="Reel">Reel</option>
+              <option value="Stories">Stories</option>
+              <option value="Carrusel">Carrusel</option>
+              <option value="Pendiente">Pendiente</option>
+            </select>
+            <button onclick="addInsta()" style="flex:1">+ Añadir</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const DAYS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+let currentWeekOffset = 0;
+let instaFilter = 'all';
+
+// ── STORAGE ──
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
+function load(key, def) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch(e){ return def; } }
+
+// ── WEEK UTILS ──
+function getWeekStart(offset = 0) {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = (day === 0 ? -6 : 1 - day);
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diff + offset * 7);
+  monday.setHours(0,0,0,0);
+  return monday;
+}
+
+function weekKey(offset) {
+  const d = getWeekStart(offset);
+  return `week_${d.getFullYear()}_${d.getMonth()}_${d.getDate()}`;
+}
+
+function formatWeekLabel(offset) {
+  const start = getWeekStart(offset);
+  const end = new Date(start); end.setDate(start.getDate() + 6);
+  const fmt = d => d.toLocaleDateString('es-ES', {day:'numeric', month:'short'});
+  return `${fmt(start)} — ${fmt(end)}`;
+}
+
+function isToday(weekStart, dayIndex) {
+  const d = new Date(weekStart);
+  d.setDate(weekStart.getDate() + dayIndex);
+  const now = new Date();
+  return d.toDateString() === now.toDateString();
+}
+
+// ── TASKS ──
+function getTasks(offset) {
+  return load(weekKey(offset), DAYS.map(() => []));
+}
+
+function saveTasks(offset, tasks) {
+  save(weekKey(offset), tasks);
+}
+
+function getRecurring() {
+  return load('recurring_tasks', DAYS.map(() => []));
+}
+
+function saveRecurring(r) {
+  save('recurring_tasks', r);
+}
+
+function buildWeek() {
+  const wStart = getWeekStart(currentWeekOffset);
+  document.getElementById('weekLabel').textContent = formatWeekLabel(currentWeekOffset);
+
+  let tasks = getTasks(currentWeekOffset);
+  const recur = getRecurring();
+
+  // Ensure right length
+  while (tasks.length < 7) tasks.push([]);
+
+  const grid = document.getElementById('weekGrid');
+  grid.innerHTML = '';
+
+  DAYS.forEach((day, i) => {
+    const date = new Date(wStart);
+    date.setDate(wStart.getDate() + i);
+    const col = document.createElement('div');
+    col.className = 'day-col';
+
+    const todayClass = isToday(wStart, i) ? ' today' : '';
+    col.innerHTML = `
+      <div class="day-header${todayClass}">
+        <span class="day-name">${day}</span>
+        <span class="day-date">${date.getDate()}</span>
+      </div>
+      <div class="task-list" id="tasks-${i}"></div>
+      <label class="recur-toggle">
+        <input type="checkbox" id="recurCheck-${i}" onchange="toggleRecurInput(${i}, this.checked)"> recurrente
+      </label>
+      <div class="add-task-form">
+        <input type="text" id="taskInput-${i}" placeholder="Añadir tarea..." onkeydown="if(event.key==='Enter') addTask(${i})">
+        <button onclick="addTask(${i})">+</button>
+      </div>
+    `;
+    grid.appendChild(col);
+    renderTasks(i, tasks[i], recur[i] || []);
+  });
+}
+
+function renderTasks(dayIdx, tasks, recur) {
+  const list = document.getElementById(`tasks-${dayIdx}`);
+  if (!list) return;
+  list.innerHTML = '';
+
+  const combined = [
+    ...recur.map(t => ({...t, isRecur: true})),
+    ...tasks.map(t => ({...t, isRecur: false}))
+  ];
+
+  if (combined.length === 0) {
+    list.innerHTML = '<div class="empty-state">Sin tareas</div>';
+    return;
+  }
+
+  combined.forEach((task, idx) => {
+    const item = document.createElement('div');
+    item.className = 'task-item' + (task.done ? ' done' : '');
+    const realIdx = task.isRecur ? idx : idx - recur.length;
+    item.innerHTML = `
+      <input type="checkbox" ${task.done ? 'checked' : ''} onchange="toggleTask(${dayIdx}, ${realIdx}, ${task.isRecur}, this.checked)">
+      <span class="task-text">${escHtml(task.text)}</span>
+      ${task.isRecur ? '<span class="tag-recur">∞</span>' : ''}
+      <button class="task-delete" onclick="deleteTask(${dayIdx}, ${realIdx}, ${task.isRecur})">×</button>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function addTask(dayIdx) {
+  const input = document.getElementById(`taskInput-${dayIdx}`);
+  const text = input.value.trim();
+  if (!text) return;
+
+  const isRecur = document.getElementById(`recurCheck-${dayIdx}`)?.checked;
+
+  if (isRecur) {
+    const recur = getRecurring();
+    while (recur.length <= dayIdx) recur.push([]);
+    recur[dayIdx].push({ text, done: false });
+    saveRecurring(recur);
+  } else {
+    const tasks = getTasks(currentWeekOffset);
+    while (tasks.length <= dayIdx) tasks.push([]);
+    tasks[dayIdx].push({ text, done: false });
+    saveTasks(currentWeekOffset, tasks);
+  }
+
+  input.value = '';
+  if (document.getElementById(`recurCheck-${dayIdx}`)) {
+    document.getElementById(`recurCheck-${dayIdx}`).checked = false;
+  }
+  buildWeek();
+}
+
+function toggleTask(dayIdx, idx, isRecur, done) {
+  if (isRecur) {
+    const recur = getRecurring();
+    if (recur[dayIdx] && recur[dayIdx][idx]) recur[dayIdx][idx].done = done;
+    saveRecurring(recur);
+  } else {
+    const tasks = getTasks(currentWeekOffset);
+    if (tasks[dayIdx] && tasks[dayIdx][idx]) tasks[dayIdx][idx].done = done;
+    saveTasks(currentWeekOffset, tasks);
+  }
+  buildWeek();
+}
+
+function deleteTask(dayIdx, idx, isRecur) {
+  if (isRecur) {
+    const recur = getRecurring();
+    recur[dayIdx].splice(idx, 1);
+    saveRecurring(recur);
+  } else {
+    const tasks = getTasks(currentWeekOffset);
+    tasks[dayIdx].splice(idx, 1);
+    saveTasks(currentWeekOffset, tasks);
+  }
+  buildWeek();
+}
+
+function toggleRecurInput(dayIdx, checked) {
+  // visual cue only – handled in addTask
+}
+
+function resetWeekTasks() {
+  if (!confirm('¿Limpiar tareas completadas de esta semana? Las recurrentes se mantienen.')) return;
+  const tasks = getTasks(currentWeekOffset);
+  const cleaned = tasks.map(day => day.filter(t => !t.done));
+  saveTasks(currentWeekOffset, cleaned);
+  // reset done on recurrentes
+  const recur = getRecurring();
+  recur.forEach(day => day.forEach(t => t.done = false));
+  saveRecurring(recur);
+  buildWeek();
+}
+
+function changeWeek(dir) {
+  currentWeekOffset += dir;
+  buildWeek();
+}
+
+// ── IDEAS ──
+function getIdeas() { return load('ideas', []); }
+function saveIdeas(i) { save('ideas', i); }
+
+function renderIdeas() {
+  const ideas = getIdeas();
+  const list = document.getElementById('ideasList');
+  document.getElementById('ideasCount').textContent = ideas.length;
+  if (ideas.length === 0) {
+    list.innerHTML = '<div class="empty-state">Sin ideas aún. ¡Añade la primera!</div>';
+    return;
+  }
+  list.innerHTML = ideas.map((idea, i) => `
+    <div class="note-item">
+      <div class="note-bullet"></div>
+      <span class="note-text">${escHtml(idea.text)}</span>
+      <button class="note-delete" onclick="deleteIdea(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function addIdea() {
+  const input = document.getElementById('ideaInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const ideas = getIdeas();
+  ideas.unshift({ text });
+  saveIdeas(ideas);
+  input.value = '';
+  renderIdeas();
+}
+
+function deleteIdea(idx) {
+  const ideas = getIdeas();
+  ideas.splice(idx, 1);
+  saveIdeas(ideas);
+  renderIdeas();
+}
+
+// ── INSTAGRAM ──
+function getInsta() { return load('insta', []); }
+function saveInsta(i) { save('insta', i); }
+
+const typeColors = { Reel: 'teal', Stories: '#9c27b0', Carrusel: '#e65100', Pendiente: '#e65100' };
+const typeBg = { Reel: 'rgba(26,140,140,0.12)', Stories: 'rgba(156,39,176,0.1)', Carrusel: 'rgba(201,168,76,0.12)', Pendiente: 'rgba(230,81,0,0.1)' };
+
+function renderInsta() {
+  const all = getInsta();
+  document.getElementById('instaCount').textContent = all.length;
+  const filtered = instaFilter === 'all' ? all : all.filter(i => i.type === instaFilter);
+  const list = document.getElementById('instaList');
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state">Sin contenido aquí. ¡Empieza a planificar!</div>';
+    return;
+  }
+  list.innerHTML = filtered.map((item, i) => {
+    const realIdx = all.indexOf(item);
+    const color = typeColors[item.type] || 'var(--teal)';
+    const bg = typeBg[item.type] || '';
+    return `
+    <div class="note-item" style="border-left:3px solid ${color};">
+      <div class="note-bullet teal" style="background:${color}"></div>
+      <span class="note-text">${escHtml(item.text)}</span>
+      <span class="content-type-badge" style="background:${bg};color:${color}">${item.type}</span>
+      <button class="note-delete" onclick="deleteInsta(${realIdx})">×</button>
+    </div>`;
+  }).join('');
+}
+
+function addInsta() {
+  const input = document.getElementById('instaInput');
+  const type = document.getElementById('instaType').value;
+  const text = input.value.trim();
+  if (!text) return;
+  const all = getInsta();
+  all.unshift({ text, type });
+  saveInsta(all);
+  input.value = '';
+  renderInsta();
+}
+
+function deleteInsta(idx) {
+  const all = getInsta();
+  all.splice(idx, 1);
+  saveInsta(all);
+  renderInsta();
+}
+
+function filterInsta(filter, el) {
+  instaFilter = filter;
+  document.querySelectorAll('#instaTags .insta-tag').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderInsta();
+}
+
+// ── TABS ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`view-${name}`).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'ideas') renderIdeas();
+  if (name === 'insta') renderInsta();
+}
+
+// ── UTILS ──
+function escHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── INIT ──
+buildWeek();
+</script>
+
+</body>
+</html>
